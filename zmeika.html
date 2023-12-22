@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300&display=swap" rel="stylesheet">
+    <title>Змейка</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        #title {
+            margin-bottom: 20px;
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(20, 20px);
+            gap: 0;
+            border: 1px solid #ccc;
+        }
+
+        .cell {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .snake {
+            background-color: red;
+        }
+
+        .food {
+            background-color: green;
+        }
+
+        #score {
+            margin-top: 20px;
+        }
+
+        #total-budget {
+            margin-top: 20px;
+        }
+
+        #score-value,
+        #total-budget-value,
+        #historyPopup {
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .hidden {
+            opacity: 0;
+        }
+
+        .visible {
+            opacity: 1;
+        }
+
+        @keyframes shake {
+            0%, 100% {
+                transform: translate(0, 0);
+            }
+
+            10%, 30%, 50%, 70%, 90% {
+                transform: translate(-5px, 5px);
+            }
+
+            20%, 40%, 60%, 80% {
+                transform: translate(5px, -5px);
+            }
+        }
+
+        #game-board.shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background-color: white;
+            border: 2px solid #ccc;
+            z-index: 999;
+            overflow: scroll; /* Changed from overflow-y: auto; */
+            max-height: 300px; /* Adjust the max-height as needed */
+            overflow-x: hidden;
+        }
+
+        .popup #closeButton {
+            margin-top: 10px;
+        }
+
+        #historyContent {
+            margin-bottom: 10px;
+        }
+
+
+        #storePopup {
+            /* Стили для магазинского попапа */
+            display: none;
+        }
+
+        .item {
+            /* Стили для каждого товара в магазине */
+            margin-bottom: 10px;
+        }
+
+        .buyButton:disabled {
+            /* Стили для неактивных кнопок "Купить" */
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Ваши текущие стили остаются без изменений */
+
+/* Стили для различных цветов змей */
+.green-snake .snake {
+    background-color: green; /* Змея зеленого цвета */
+}
+
+.pink-snake .snake {
+    background-color: pink; /* Змея розового цвета */
+}
+
+.blue-snake .snake {
+    background-color: blue; /* Змея синего цвета */
+}
+
+.orange-snake .snake {
+    background-color: orange; /* Змея оранжевого цвета */
+}
+
+.black-snake .snake {
+    background-color: black; /* Змея черного цвета */
+}
+
+#info-container {
+            background-color: #ccc;
+            border-radius: 12px;
+            padding: 10px 150px; /* Adjusted padding for increased horizontal width */
+            display: flex;
+            flex-direction: column; /* Updated to column layout */
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        #score,
+        #total-budget {
+            color: #333; /* Text color for the score and total budget */
+            margin: 5px 0; /* Adjusted margin */
+        }
+
+/* Default button styles */
+button {
+    padding: 10px 15px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Hover effect for devices with a pointer (e.g., devices with a mouse) */
+@media (hover: hover) {
+    button:hover {
+        background-color: #8Fbc8F !important;
+        color: #fff !important;
+    }
+}
+
+
+        #historyButton,
+        #closeButton,
+        #storeButton,
+        #closeStoreButton {
+            background-color: #4285f4;
+            color: #fff;
+        }
+
+        .buyButton:disabled {
+            background-color: #ccc;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        #storeContent {
+    margin-bottom: 10px;
+    user-select: none; /* Prevent text selection */
+}
+
+.item {
+    margin-bottom: 10px;
+}
+
+.buyButton:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#game-board {
+    touch-action: none;
+}
+
+
+    </style>
+</head>
+
+<body>
+    <h1 id="title">Змейка</h1>
+    <div id="info-container">
+        <div id="score">Очки: <span id="score-value" class="visible">0</span></div>
+        <div id="total-budget">Бюджет: <span id="total-budget-value" class="visible">0</span></div>
+    </div>
+    <div id="game-board"></div>
+    <button id="historyButton">Показать историю игр</button>
+
+    <div id="historyPopup" class="popup">
+        <div id="historyContent"></div>
+        <button id="closeButton">Закрыть</button>
+    </div>
+
+    <button id="storeButton">Магазин</button>
+<button onclick="shareTelegram()">Поделиться</button>
+<div id="storePopup" class="popup">
+    <div id="storeContent">
+        <div class="item" id="item1">
+            <span>Зеленый цвет для змейки - 50 очков</span>
+            <button class="buyButton" data-cost="50" data-index="1">Купить</button>
+        </div>
+        <div class="item" id="item2">
+            <span>Розовая змейка - 100 очков</span>
+            <button class="buyButton" data-cost="100" data-index="2">Купить</button>
+        </div>
+        <div class="item" id="item3">
+            <span>Синяя змейка - 150 очков</span>
+            <button class="buyButton" data-cost="150" data-index="3">Купить</button>
+        </div>
+        <div class="item" id="item4">
+            <span>Оранжевая змейка - 200 очков</span>
+            <button class="buyButton" data-cost="200" data-index="4">Купить</button>
+        </div>
+        <div class="item" id="item5">
+            <span>Черная змейка - 300 очков</span>
+            <button class="buyButton" data-cost="300" data-index="5">Купить</button>
+        </div>
+    </div>
+    <button id="closeStoreButton">Закрыть</button>
+</div>
+
+
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const boardSize = 20;
+    const initialSnakeLength = 1;
+
+    let snake = [];
+    let direction = "right";
+    let food = generateFood();
+    let score = 0;
+    let totalBudget = parseInt(localStorage.getItem("totalBudget")) || 0;
+    let snakeColor = localStorage.getItem("snakeColor") || "red"; // По умолчанию красный цвет
+
+    const gameBoard = document.getElementById("game-board");
+    const scoreElement = document.getElementById("score-value");
+    const totalBudgetElement = document.getElementById("total-budget-value");
+    const historyButton = document.getElementById("historyButton");
+    const historyPopup = document.getElementById("historyPopup");
+    const closeButton = document.getElementById("closeButton");
+    const historyContent = document.getElementById("historyContent");
+    const storeButton = document.getElementById("storeButton");
+    const storePopup = document.getElementById("storePopup");
+    const closeStoreButton = document.getElementById("closeStoreButton");
+    const storeContent = document.getElementById("storeContent");
+
+    function generateFood() {
+        let newFoodPosition;
+        do {
+            newFoodPosition = {
+                x: Math.floor(Math.random() * boardSize),
+                y: Math.floor(Math.random() * boardSize),
+            };
+        } while (isPositionOccupiedBySnake(newFoodPosition));
+
+        return newFoodPosition;
+    }
+
+    function isPositionOccupiedBySnake(position) {
+        return snake.some(
+            function (segment) {
+                return segment.x === position.x && segment.y === position.y;
+            }
+        );
+    }
+
+function draw() {
+    gameBoard.innerHTML = "";
+
+    for (let row = 0; row < boardSize; row++) {
+        for (let col = 0; col < boardSize; col++) {
+            const cell = document.createElement("div");
+            cell.classList.add("cell");
+
+            const isSnakeSegment = snake.some((segment) => segment.x === col && segment.y === row);
+            const isFood = food.x === col && food.y === row;
+
+            if (isSnakeSegment) {
+                const snakeSegment = snake.find((segment) => segment.x === col && segment.y === row);
+                cell.classList.add("snake", snakeSegment.color); // Apply the snake color class
+            } else if (isFood) {
+                cell.classList.add("food");
+            }
+
+            gameBoard.appendChild(cell);
+        }
+    }
+}
+
+
+    function updateScore() {
+        scoreElement.textContent = score;
+        scoreElement.classList.remove("visible");
+        scoreElement.classList.add("hidden");
+
+        setTimeout(function () {
+            scoreElement.classList.remove("hidden");
+            scoreElement.classList.add("visible");
+        }, 500);
+    }
+
+    function updateTotalBudget() {
+        totalBudget += score;
+        totalBudgetElement.textContent = totalBudget;
+        totalBudgetElement.classList.remove("visible");
+        totalBudgetElement.classList.add("hidden");
+
+        setTimeout(function () {
+            totalBudgetElement.classList.remove("hidden");
+            totalBudgetElement.classList.add("visible");
+        }, 500);
+        localStorage.setItem("totalBudget", totalBudget);
+
+        if (score > 0) {
+            updateGameHistory();
+        }
+    }
+
+    function updateGameHistory() {
+        const history = JSON.parse(localStorage.getItem("gameHistory")) || [];
+        const gameInfo = { score: score };
+        history.push(gameInfo);
+        localStorage.setItem("gameHistory", JSON.stringify(history));
+    }
+
+    function update() {
+        const head = { ...snake[0] };
+
+        switch (direction) {
+            case "up":
+                if (direction !== "down") {
+                    head.y = (head.y - 1 + boardSize) % boardSize;
+                }
+                break;
+            case "down":
+                if (direction !== "up") {
+                    head.y = (head.y + 1) % boardSize;
+                }
+                break;
+            case "left":
+                if (direction !== "right") {
+                    head.x = (head.x - 1 + boardSize) % boardSize;
+                }
+                break;
+            case "right":
+                if (direction !== "left") {
+                    head.x = (head.x + 1) % boardSize;
+                }
+                break;
+        }
+
+        scoreElement.classList.add("score-animation");
+        setTimeout(function () {
+            scoreElement.classList.remove("score-animation");
+        }, 500);
+
+        snake.unshift(head);
+
+        if (head.x === food.x && head.y === food.y) {
+            score += 1;
+            updateScore();
+            food = generateFood();
+        } else {
+            snake.pop();
+        }
+
+        if (checkCollision()) {
+            updateTotalBudget();
+            resetGame();
+        }
+
+        draw();
+    }
+
+    function checkCollision() {
+        const head = snake[0];
+        return (
+            snake.slice(1).some(
+                function (segment) {
+                    return segment.x === head.x && segment.y === head.y;
+                }
+            ) ||
+            head.x < 0 ||
+            head.x >= boardSize ||
+            head.y < 0 ||
+            head.y >= boardSize
+        );
+    }
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    function handleTouchStart(event) {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+    }
+
+    function handleTouchMove(event) {
+        if (!touchStartX || !touchStartY) return;
+
+        const touchEndX = event.touches[0].clientX;
+        const touchEndY = event.touches[0].clientY;
+
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+
+        // Determine the direction of the swipe
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Horizontal swipe
+            if (deltaX > 0) {
+                // Swipe right
+                direction = "right";
+            } else {
+                // Swipe left
+                direction = "left";
+            }
+        } else {
+            // Vertical swipe
+            if (deltaY > 0) {
+                // Swipe down
+                direction = "down";
+            } else {
+                // Swipe up
+                direction = "up";
+            }
+        }
+
+        // Reset touch start coordinates
+        touchStartX = 0;
+        touchStartY = 0;
+    }
+
+    // Attach touch event listeners to the game board
+    gameBoard.addEventListener("touchstart", handleTouchStart);
+    gameBoard.addEventListener("touchmove", handleTouchMove);
+
+    function resetGame() {
+        snake = [{ x: 10, y: 10 }];
+        direction = "right";
+        food = generateFood();
+        score = 0;
+        scoreElement.textContent = score;
+
+        gameBoard.classList.add("shake");
+        setTimeout(function () {
+            gameBoard.classList.remove("shake");
+        }, 500);
+
+        draw();
+    }
+
+    let oneKeyPressCount = 0;
+
+    function handleKeyPress(event) {
+        const currentDirection = direction;
+
+        switch (event.key) {
+            case "ArrowUp":
+                if (currentDirection !== "down") {
+                    direction = "up";
+                }
+                break;
+            case "ArrowDown":
+                if (currentDirection !== "up") {
+                    direction = "down";
+                }
+                break;
+            case "ArrowLeft":
+                if (currentDirection !== "right") {
+                    direction = "left";
+                }
+                break;
+            case "ArrowRight":
+                if (currentDirection !== "left") {
+                    direction = "right";
+                }
+                break;
+            case "1":
+                oneKeyPressCount++;
+                if (oneKeyPressCount === 3) {
+                    totalBudget += 500;
+                    totalBudgetElement.textContent = totalBudget;
+                    localStorage.setItem("totalBudget", totalBudget);
+                    oneKeyPressCount = 0; // Сброс счетчика после добавления 500 очков
+                }
+                break;
+        }
+    }
+
+    function showHistoryPopup() {
+        historyContent.innerHTML = "";
+        const history = JSON.parse(localStorage.getItem("gameHistory")) || [];
+
+        history.forEach(
+            function (game, index) {
+                const gameInfo = document.createElement("div");
+                gameInfo.textContent = `Игра ${index + 1}: ${game.score} очков`;
+                historyContent.appendChild(gameInfo);
+            }
+        );
+
+        historyPopup.style.display = "block";
+
+        // Scroll to the last game
+        historyPopup.scrollTop = historyPopup.scrollHeight;
+    }
+
+    function closeHistoryPopup() {
+        historyPopup.style.display = "none";
+    }
+
+    function showStorePopup() {
+        storePopup.style.display = "block";
+    }
+
+    function closeStorePopup() {
+        storePopup.style.display = "none";
+    }
+
+    updateTotalBudget();
+
+    document.addEventListener("keydown", handleKeyPress);
+
+    for (let i = 0; i < initialSnakeLength; i++) {
+        snake.push({ x: 10 - i, y: 10 });
+    }
+
+    draw();
+    setInterval(update, 150);
+
+    historyButton.addEventListener("click", showHistoryPopup);
+    closeButton.addEventListener("click", closeHistoryPopup);
+
+    storeButton.addEventListener("click", showStorePopup);
+    closeStoreButton.addEventListener("click", closeStorePopup);
+
+storeContent.addEventListener("click", function (event) {
+    if (event.target.classList.contains("buyButton")) {
+        const cost = parseInt(event.target.getAttribute("data-cost"));
+        const index = parseInt(event.target.getAttribute("data-index"));
+
+        if (totalBudget >= cost) {
+            totalBudget -= cost;
+            totalBudgetElement.textContent = totalBudget;
+            localStorage.setItem("totalBudget", totalBudget);
+
+            // Примените выбранную змею к игре и сохраните цвет в локальное хранилище
+            applySnake(index);
+
+            closeStorePopup(); // Закрывает магазин после покупки
+        } else {
+            // Предупреждение или обратная связь о недостаточном бюджете
+            alert("Недостаточно очков для покупки!");
+        }
+
+        // Update the store buttons after each purchase
+        updateStoreButtons();
+    }
+});
+
+
+
+function applySnake(index) {
+    const snakeClass = getSnakeClass(index);
+
+    // Save the selected snake color in local storage
+    localStorage.setItem("snakeColor", snakeClass);
+
+    // Mark the snake as purchased
+    localStorage.setItem(`snakePurchased_${index}`, true);
+
+    // Remove existing snake color classes
+    gameBoard.classList.remove("green-snake", "pink-snake", "blue-snake", "orange-snake", "black-snake");
+
+    // Add the new snake color class
+    gameBoard.classList.add(snakeClass);
+
+    // Update the snake array with the new color
+    snake.forEach((segment) => {
+        segment.color = snakeClass; // Add a color property to each snake segment
+    });
+
+    updateStoreButtons(); // Update the store buttons after applying the snake color
+}
+
+    // Check if there's a saved snake color in local storage and apply it
+    if (snakeColor) {
+        gameBoard.classList.add(snakeColor);
+        snake.forEach((segment) => {
+            segment.color = snakeColor;
+        });
+    }
+
+    // Update the store buttons on page load
+    updateStoreButtons();
+
+    function updateStoreButtons() {
+    const buyButtons = document.querySelectorAll('.buyButton');
+
+    buyButtons.forEach((button, index) => {
+        const isPurchased = localStorage.getItem(`snakePurchased_${index + 1}`);
+        const isSelected = localStorage.getItem("snakeColor") === getSnakeClass(index + 1);
+
+        if (isPurchased) {
+            button.textContent = isSelected ? "Выбрано" : "Выбрать";
+            button.disabled = isSelected; // Disable the button if the snake color is selected
+        } else {
+            button.textContent = "Купить";
+            button.disabled = false;
+        }
+    });
+}
+
+
+    function getSnakeClass(index) {
+        switch (index) {
+            case 1:
+                return "green-snake";
+            case 2:
+                return "pink-snake";
+            case 3:
+                return "blue-snake";
+            case 4:
+                return "orange-snake";
+            case 5:
+                return "black-snake";
+            default:
+                return ""; // Вернуть пустую строку или другое значение по умолчанию
+        }
+    }
+});
+
+function shareTelegram() {
+  var budgetElement = document.getElementById("total-budget-value");
+  var budget = budgetElement.textContent;
+
+  var url = encodeURIComponent("https://example.com/budget");
+  var text = encodeURIComponent("Мой бюджет составляет " + budget + " баллов");
+  var shareUrl = "https://t.me/share/url?url=" + url + "&text=" + text;
+  window.open(shareUrl);
+}
+
+document.addEventListener("keydown", handleKeyPress);
+
+
+</script>
+
+</body>
+
+</html>
